@@ -1,0 +1,54 @@
+SAML Assertions Notes
+
+SAML -> Security Assertion Markup Language
+
+Is an XML based framework that allows identity and security information to be shared across security domains.
+
+SAML spec was primarily designed for cross domain web browser SSO, is extensible
+
+An assertion in this framework is an XML Security token
+
+In OAuth, an authorization grant is an abstract term used to describe intermediate creds that represent the resource owner’s authorization.
+
+This RFC heavily reuses formatting and processing rules defined in the SAML profiles (OASIS.SAML-PROFILES-2.0-is).
+
+For third party authorization, this RFC expresses how to do that without
+
+Parameters to pass for OAuth:
+
+grant_type -> urn:ietf:params:oauth:grant-type:saml2- bearer
+assertion -> SAML assertion (base64 url encoded)
+scope -> optional
+
+Mandatory Assertion Validation Criteria:
+The assertion’s issuer element must contain a unique identifier for the entity that defined the assertion
+The intended audience must be signaled amongst the following XPath.
+conditions.audienceRestriction.audience
+The assertion must contain a subject identifying the principal
+The assertion must have an expiry field denoting the expiration time
+Must have a header attribute somewhere, as well as the endpoint of the authorization server
+Authorization server must reject the the entire assertion if it has expired, or can reject it if the expiration time is unreasonably far in the future.
+If the assertion issuer directly authenticated the subject, the assertion should contain an AuthnStatement.
+Other statements (such as ) May be included in the assertion.
+The assertion must be digitally signed, or have a MAC Message Authentication Code)
+Encrypted elements may appear in place of their plaintext counterparts
+Authorization Server must reject an assertion that fails other validation criteria associated with the OASIS SAML profile
+
+OASIS is a non-profit consortium that drives the development, convergence and adoption of open standards for the global information society.
+
+Subject Confirmation or NameID elements identify the principal?
+
+If the assertion fails validation, the authorization server must return an error response. The error field should read “invalid_grant”
+
+Security considerations for this RFC are listed in the original OAuth 2.0 RFC, the assertion framework extension for OAuth 2.0, a document by OASIS on security considerations for SAML.
+
+The following items need to align to ensure interoperability:
+Issuer and Audience identifiers,
+The location of the token endpoint
+The keys used to apply and identify digital signatures of assertions
+One time use restrictions
+Maximum assertion lifetime
+Specific subject and attribute requirements.
+AuthN -> Authentication
+AuthZ -> Authorization
+TTL -> Time To Live

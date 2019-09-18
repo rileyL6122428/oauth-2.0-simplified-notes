@@ -1,0 +1,434 @@
+OAuth 2.0 simplified notes
+
+OAuth 1 grew out of a need for standardized auth that 3rd party devs can grow on top of
+
+Grew from a mailing list involving most big web app companies
+
+OAuth 2,0 sought to make OAuth work for mobile and simplify the standard
+
+Most big players, members of both web and enterprise were reading through OAuth 2.0 draft 10. After draft 10, enterprise folks took over, and a schism grew. Final drafts leave a lot of open ended items
+
+Earn Hammer withdrew as primary editor in 2012
+
+Redirect urls are required when registering an app. Redirect URI must be HTTPS, or you run the risk of code being intercepted.
+
+Best practice not to include query string in a redirect URL
+
+State parameter -> opaque to the OAuth server, returned to client after OAuth process. Use if for your purposes
+
+One common application of state is CSRF prevention (used as a CSRF token)
+
+Scopes - the items readable by the third party
+
+If you’re redirected back with a code, u can exchange that for an access token ( maybe this is the auth code pattern?)
+
+OAuth is an authorization protocol, but it is also used just for authentication
+
+If you just want to identify the user, u can call a /user endpoint on the API (if supported), or you can utilize OpenID Connect
+
+If you request scope openid/id_token, you get back an id_token as a JWT
+
+sub claim in the JWT is the subject, unique user ID
+
+OpenID Connect specifies an endpoint to look up user identity, in addition to the JWT
+
+You can use the JWT to get user info, but u should really validate it first (this is the most performant way to grab this info). Otherwise, you can grab the same info from the user info endpoint after getting an access token
+
+For server side apps, use the authorization code grant: authorize with the OAuth server (returns an authorization code), then exchange the authorization code for an access token
+
+Parameters you should pass in the authorization call for authorization code grant
+response_type=code
+client_id=
+redirect_uri=
+scope=
+state=
+
+On the OAuth server login page, the user can either deny or approve. In either case, you are sent back to the redirect URI
+
+If approved, you make a POST request to the OAuth server’s token endpoint
+
+Parameters:
+grant_type
+code
+redirect_uri
+client authentication (client key and secret)
+
+Errors:
+If redirect uri valid: error parameters and possibly desscdiption
+Invalid redirect uri: user sees the error
+In short, it seems like if an item is unrecognized, the server will not redirect back
+There is a list of established parameter types
+
+SPA apps go through the same flow as the Auth code, minus the client secret
+Request parameters
+response_type=code
+Otherwise, the same
+State parameter is even more important for SPA
+
+Some SPA flows use the implicit grant instead of with code with no secret
+
+The implicit flow bypasses the code exchange step, instead access token is returned immediately
+
+To support Auth code grant on SPA, if OAuth server is cross domain, it must support POST request for token with CORS. If not supported, you have to use implicit (CORS not required)
+
+The only way the auth code grant with no client secret can be secure is by using the state parameter
+
+Best practice for Mobile and Native apps
+
+Use Authorization flow along with launching an external browser, in order to ensure that the native app cannot modify the browser window or inspect the contents.
+
+HERE
+
+If the service supports PKCE, that adds a layer of protection
+
+For mobile, the auth code method - client secret relies on being able to register a custom URL protocol that tells the phone to launch a corresponding native app whenever the URL is opened
+
+Then follow same steps as previous auth code - secret, just open the native browser and redirect back to the registered host that opens ur app.
+
+Do not ever open an embedded app view
+
+To use PKCE, the service you consume must support it
+
+After OAuthing, the access_token goes in the header or the POST Paramus
+
+Access tokens should always be considered opaque to the client, no guarantee that they may change format in the future
+
+To use a refresh token, make a post request to token endpoint with grant_type=refresh_token
+Include the refresh token
+
+If the post is successful, either your expired token will work, or you will get a new access token back
+
+Things to register with an OAuth server:
+app name
+App icon
+URL to app home page
+App description
+App privacy policy link
+List of redirect urls
+
+Some apps disable implicit grant by default
+
+Good idea to make registering services declare public or confidential
+If confidential, you should disable implicit grant
+
+Good idea to ask developers what type of app they are registering
+
+Deleting an app should revoke all access tokens and other cards issued
+
+Auth server must not redirect back to an incorrect redirect URI, this allows for “open redirector “ attacks. Immediately fail the user on the auth server
+
+SAML assertions can be used in flow to forward a login from and authentication server to the OAuth server
+
+Login flow when auth and identity server are combined and not logged in
+
+3rd party app -> login screen & auth request -> redirect to third party app
+
+Login flow when auth and identity server are combined and logged in
+
+3rd Party App -> Auth Request -> Redirect to third party
+
+Login flow when auth and identity server not combined and not logged in
+
+3rd party app -> Authentication Server (forward SAML token) -> OAuth Server -> redirect to third party
+Login flow when auth and identity server not combined and logged in
+
+3rd party application -> OAuth Server -> Redirect to 3rd party Application
+
+Authorization interface on the Auth server should make it clear which app, and which user account are getting access. Also, in user friendly terms, you should make it apparent which the scope of access (translate the scope Enuma for the user).
+
+The interface should also explain access token lifetime.
+
+Authorization code and State are returned in the redirect URL
+
+Authorization code has a short lifetime
+
+Authorization codes can be implemented as self-encoded, so u don’t have to store them in a DB
+
+U can use JWS -> Json Web Signature
+
+Info that needs to be associated with the Auth code-> client ID, Redirect URI, User info/ identifier, exp date, unique identifier
+
+Some security threats
+
+Phishing
+Make a page that looks like the OAuth server login page and put it in an embedded web view (no login bar) to get user creds
+
+Click Jacking
+Open an app in a transparent iframe above your page, place phony page UI components in a way that a user will click the transparent iframes buttons/ form
+
+Redirect URL Manipulation
+Use a good client ID with an unregistered redirect URI
+
+When defining scopes, separate read and write scopes
+
+Don’t create too many scopes, or users will just click yes until the 3rd party app works
+
+OAuth 2.0 leaves open the idea of a user interface that lets a user permit scopes via checkboxes on the authorization form. This idea is underused.
+
+When allowing custom URL schemes/protocols in redirect URIs, you may want to enforce schemes that ensure uniqueness
+
+Three places where u. Need to validate redirect URIs:
+App registration, authorize call, access code exchange call
+
+Access tokens should only be passed over an https connection
+
+If an authorization code is used more than once, it should be treated as an attack, and all tokens granted by it should be revoked
+
+The password grant should never be used with third party apps, only intended for first party apps
+
+Client Credentials Grant
+
+Used by apps to request access to their own resources, not on behalf of the user
+
+Parameters in the access token response:
+access_token
+token_type
+expires_in
+refresh_token
+scope -> especially if it differs from what the third party app wanted
+
+Also, ensure the following cache busting response headers are included:
+Cache-Control: no-store
+Pragma: no-cache
+
+Access Tokens are described in a separate spec
+
+Only certain characters are allowed in the token
+
+Use TLS (Transport Layer Security) when sending Access tokens over http
+
+Bearer Tokens do not require proof-of-possession
+
+According to RFC for bearer tokens - Clients should use the auth header method of passing an access token, resource servers MUST support it
+
+Passing the access token as a form param is discouraged, but possible. Not always supported by a resource server
+
+Following attributes are defined by the RFC for bearer tokens:
+
+Realm, scope
+
+Security threats associated with tokens
+
+Token Manufacture/ Modification
+Token Disclosure
+Token Redirect
+Token Replay
+
+Don’t store bearer tokens as cookie
+
+All possible error codes for an access token are defined by the OAuth spec, you don’t need to roll custom codes
+
+Benefit provided by self encoded access tokens: avoid storing tokens in a DB
+
+One way to create self encoded tokens is to create a JSON serialized rep of token, then digitally sign
+
+A common technique for this is to use JWS (JSON Web Signature) to handle encoding, decoding, and verification
+
+There is no way to invalidate a self encoded token without letting the exp time pass
+
+Refresh tokens cannot be issued using the implicit grant
+
+Refresh token requests are often built into developer SDKs
+
+Different access token/ refresh token schemes
+Short lived access tokens and long lived refresh tokens
+Short lived access tokens and no refresh tokens
+Non-Expiring access tokens
+
+A refresh token request is treated as a separate Auth Grant
+
+If the third party was issued a client secret, then the client must pass the secret when refreshing an access token
+
+When refreshing an access token, server usually issues a new refresh token, or the existing refresh token is considered to still be valid
+
+Users should be able to see which third party apps have access to their resources. The OAuth spec does not prescribe how to revoke access or related ops.
+
+Their are a couple different reasons why you will need to revoke access:
+User no longer wants to grant access to a third party app
+Third party dev wants to revoke all access tokens
+The developer deleted their application
+The service provider determines the third party app is compromised
+
+Verifying access tokens on a resource server:
+Decode self encoded tokens
+Lookup the token in a DB
+Use token introspection (use an internal API holding all logic of token verification)
+
+Errors from a resource server do not require details if the request is unauthorized
+
+Authorization Servers should inspect the User Agent. If the authorization request appears to be made from an embedded web view in a native app, it should be rejected.
+
+Three types of redirect urls that must be supported for OAuth in native apps:
+Custom URL scheme
+HTTPS URL Matching
+Loop back urls (this works well for command line apps as well as desktop GUI apps, not so much for mobile apps).(in this case, http is an acceptable protocol for a redirect URL)
+
+PKCE (pixie) -> Proof Key for Code Exchange -> technique for extra security during OAuth Authorize exchange in native apps
+
+Native app creates a secret, exchanges it when when requesting an access token with an authorization code
+
+OAuth for Input constrained and browserless devices:
+Used on devices such as
+Smart TVs
+Media Consoles
+Picture Frames
+Printers, ...
+
+The device instructs the user to open a URL on a secondary device such as a smartphone or computer in order to complete authorization
+
+Under the hood, the device sends an initial post request for an auth code,
+The Auth server returns a device code, user code, verification uri, poll interval, expires_in
+Then the device polls the access token endpoint at an interval, until the user verified the device at the verification uri
+
+The device code grant has 2 additional error types: slow down, authorization pending
+
+Computing Entropy -> is the randomness collected by an OS or App for use in cryptography or other uses that require randomness
+
+PKCE (Pixie)
+
+Client first creates a secret, then passing the secret again during the auth code exchange
+
+Client creates a code verifier (random string)
+
+The device uses the code verified to create a code challenge (a hash of the code verifier)
+
+The authorize request has the following parameters:
+response_type=code
+client_id
+redirect_uri
+state
+code_challenge
+code_challenge_method (method used to generate the hash)
+Pixie - Is the only way to have secure auth flow without using a client secret
+
+After getting the authorization code, the code_verifier is sent in the access token request. Here are the parameters in the authorize request:
+grant_type=authorization_code
+code
+redirect_uri
+client_id
+code_verifier
+
+Token introspection server should be available only to resource servers.
+Request to get token info should be a POST request with a single parameter (token)
+
+The token response should be a JSON object with the following params:
+active
+scope
+client_id
+username
+exp
+
+If the endpoint is exposed on the public web and locked down with Basic Auth, return a 401 if an error.
+
+All other error cases:
+token requested does not exist
+token expired
+token was issued to a different client
+(These cases all return as a 200, active=false)
+
+Threat: Token Fishing
+An attacker polls the introspection endpoint or a resource endpoint to try to get a token. Use basic auth on or don’t expose the introspection endpoint to the public web. Also, enforce rate limiting on the resource server and introspection endpoint.
+
+OAuth 2.0 spec is intentionally open ended, so you should document the following details for third party apps:
+Client registration
+Consumable Endpoints (for Auth server, and maybe resource servers?)
+Client Authentication
+sizes of strings used in client auth
+Response types (code, token for implicit)
+Redirect URL restrictions
+Default scopes
+Access token response (what’s optional?)
+Refresh Tokens
+Extension Grants (IE which of the four standard, Authorization, Client Credentials, Password, Implicit, do you support. Or which of the newer grants do you support: SAML, Device Flow Do u support custom flows?)
+
+Checkout the Terminology reference at the back of the book for lots of good flashcards
+
+Differences between OAuth 1 and 2
+Not backwards compatible
+Grant descriptions:
+
+Authorization Code: Requires App Server
+Request an Auth code, then exchange the client secret and code for an access token
+Implicit/ PKCE - used by non-confidential clients. Skip the auth code exchange. No client Secret, unless generating one on the fly with PKCE. Security is in the redirect url and optional PKCE challenge
+
+Password Grant is intended for First party apps, User offers up their creds to get an access token
+
+Client credentials is used when a 3rd party is requesting access to its own resources. The client passes its ID and Secret.
+
+Extension types are also allowed, like the device flow
+
+Cryptographic requirements in OAuth 1.0 are more complicated: each request had to be cryptographically signed. Simple cURL requests not really possible.
+
+OAuth 1.0 had three Auth flows that were eventually merged into one, that flow is good for traditional web apps, and for other client types
+
+OAuth 1.0 had trouble scaling: separation of client from Auth server was nearly impossible as the client creds were required for verifying request signatures
+
+OAuth 1.0 access tokens are more complicated: consist of a public and private key, private key is used for signing, never sent across the wire. Bearer tokens (the most common way of accessing a resource API,
+
+Revoking access tokens in OAuth 1.0 is more difficult than in 2.0. OAuth 1.0 tokens typically live for a long time. 2.0 tokens have shorter lifetimes typically with long lived refresh tokens.
+
+A big change in OAuth 1.0 to 2.0 is the separation of the Auth Server from the Resource Server
+
+OAuth 2.0 only handles third party authorization, does not specify revealing identity to a third party. OpenID Connect takes the OAuth 2.0 framework and adds an identity layer on top.
+
+OAuth 2.0 is an authorization FRAMEWORK, not a protocol. OpenID Connect is and Authentication protocol.
+
+It is possible to use OAuth 2.0 as the basis for an Authentication framework
+
+The code of OpenID Connect is based on ID tokens. This is a new token type containing user identity info. It is returned from the authorization Server.
+
+ID Tokens take the form of a JWT. JSON payload and is signed by the private key of the issuer
+
+Common JWT claims:
+sub -> subject (resource owner)
+iss -> issuer (Auth server)
+aud -> audience (third party)
+
+You can use
+OpenID Connect to establish a login session and use OAuth to access protected resources.
+
+The open ID spec
+
+Indie Auth is another Authentication protocol built on top of the OAuth 2.0 framework
+
+All users are defined by their urls and apps are also identified by their urls instead of pre-registered client IDs
+
+Indie Auth can be used for both Authentication or 3rd party authorization
+
+Indie Auth builds upon the OAuth protocol as follows:
+1. Specifies a mechanism for identifying users (resolvable urls)
+2. Specifies method of discovering authorization and token endpoints given a url
+3. Specifies a format for a client ID (resolvable url)
+4. All clients are public
+5. Redirect URIs registered by apps publishing an endpoint on their website to get the urls
+
+Works great for word press sites?
+
+Map of OAuth Specs
+
+Core specs:
+OAuth 2.0 Core - RFC 6749
+Bearer Token Usage - RFC 6750
+Threat Model and Security Considerations - RFC 6819 (definitely read this if you implement your own Auth Server)
+Token Introspection - RFC 7662
+Token Binding Extension -
+OAuth 2.0 for native apps -
+PKCE - RFC 7636
+Device Flow -
+Open ID Connect -
+Indie Auth -
+Token Revocation - RFC 7009
+Interop
+Authorization Server Metadata (Authorization Server discovery)
+Dynamic Client Registration (RFC 7591)
+Dynamic Client Management (RFC 7592)
+Enterprise
+Assertion Framework - RFC 7521
+JWT Assertions - RFC 7523
+SAML Assertions - RFC 7522
+
+Man in the middle attack: attacker secretly relays or alters the communication between two parties who think they are speaking directly to each other
+Tools for learning the framework:
+OAuth 2.0 Playground
+Google OAuth 2.0 Playground
+Open ID Connect Debugger

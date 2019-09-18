@@ -1,0 +1,59 @@
+Assertions Notes
+
+An assertion is a package of information that facilitates the sharing of identity and security information across security domains.
+
+The assertion RFC provides a general framework for the use of assertions as an authorization grant. It also provides a framework for assertions to be used in Client Authentication.
+
+Client Authentication and client authorization are orthogonal.
+
+An assertion typically contains info about a subject or principal, information about the issuing party, and when it was issued, and conditions under which it is valid.
+
+The entity that creates and signs the assertion is known as the issuer.
+
+The party that consumes the assertion and relies on its information is known as the relying party. For the purposes of this OAuth RFC, the Auth server is the relying party.
+
+Assertions used in this grant type must always be integrity protected using a digital signature or a MAC (Message Authentication Code).
+
+Common pattern 1 for obtaining an assertion:
+Client obtains an assertion from an STS (Security Token Service, or just token service). STS is capable of issuing, renewing, transforming, validating Security Tokens. A trust relationship exists between the STS and the relying party. Clients present various creds and the STS mints an assertion, filling it with required information.
+
+Assertion Pattern 2
+Client self creates the assertion. Limited info is passed in this method.
+
+Generally two types of assertion
+Bearer Assertion (get access to the resource without demonstrating possession of a cryptographic key)
+Holder-of-key assertion (demonstrates possession of cryptographic material)
+
+Protocols parameters and processing rules of this RFC are intended to support clients using bearer assertions.
+
+Because transport of assertions involves plain text credentials, you must use TLS in OAuth.
+
+request parameters required when using assertions as an authorization grant:
+grant_type
+assertion
+scope (optional)
+client_id (optional)
+
+Access tokens in this flow are recommended to short. Also l, protocol recommends no refresh tokens. Request a new access token after expiration with an assertion.
+
+Assertion Metamodel
+Issuer -> STS or client (for self signed assertions)
+Subject -> Unique identifier for the principal (resource owner for an authorization request)
+Audience -> the intended processor of the assertion
+Issued At -> assertion issue time
+Expires At -> the time at which the assertion expires
+Assertion ID -> A nonce or unique identifier for the assertion
+
+General Assertion Processing and Format Rules:
+Assertion must contain an issuer
+The assertion must contain a subject
+The assertion must contain an audience (which names the authorization Server)
+The assertion may contain an Issued At
+The authorization Server must reject assertions with an invalid signature or MAC
+Implementers of this RFC are not necessarily interoperable out of the box. There are several open-ended items that need to be agreed upon to achieve interoperability.
+
+Some security threats:
+Forged Assertions
+Counter with integrity protection (MAC or digital signature)
+Stolen Assertion
+Unauthorized disclosure of personal information
